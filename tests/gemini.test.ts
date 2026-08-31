@@ -39,6 +39,6 @@ describe("GeminiProvider fallbacks", () => {
     expect(questions).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toContain("gemini-3.6-flash");
-    expect(fetchMock.mock.calls[1][0]).toContain("gemini-3.7-flash");
+    expect(fetchMock.mock.calls[1][0]).toContain("gemini-2.5-flash");
   });
 });

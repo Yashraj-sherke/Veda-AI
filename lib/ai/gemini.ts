@@ -25,9 +25,6 @@ type UploadFileResponse = {
 };
 
 const STABLE_FALLBACK_MODELS = [
-  "gemini-3.7-flash",
-  "gemini-3.6-flash",
-  "gemini-3.5-flash",
   "gemini-2.5-flash",
 ] as const;
 
@@ -170,7 +167,7 @@ export class GeminiProvider implements AssessmentAIProvider {
                 responseMimeType: "application/json",
               },
             }),
-            signal: AbortSignal.timeout(180_000),
+            signal: AbortSignal.timeout(25_000),
           },
         );
 
@@ -188,7 +185,7 @@ export class GeminiProvider implements AssessmentAIProvider {
           const retryable = RETRYABLE_PROVIDER_STATUSES.has(response.status)
             || RETRYABLE_PROVIDER_MESSAGE.test(message);
           if (retryable && modelIndex < models.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 700 * (modelIndex + 1)));
+            await new Promise((resolve) => setTimeout(resolve, 400 * (modelIndex + 1)));
             continue;
           }
           throw lastError;
@@ -214,7 +211,7 @@ export class GeminiProvider implements AssessmentAIProvider {
         const retryable = RETRYABLE_PROVIDER_MESSAGE.test(lastError.message)
           || lastError.name === "TimeoutError";
         if (retryable && modelIndex < models.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 700 * (modelIndex + 1)));
+          await new Promise((resolve) => setTimeout(resolve, 400 * (modelIndex + 1)));
           continue;
         }
         throw lastError;

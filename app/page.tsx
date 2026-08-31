@@ -42,9 +42,27 @@ export default function HomePage() {
 
     try {
       const response = await fetch("/api/process", { method: "POST", body: formData, signal: controller.signal });
-      const payload = (await response.json()) as AssessmentResult | { error?: string };
-      if (!response.ok || !("questions" in payload)) {
-        throw new Error("error" in payload ? payload.error : "Analysis failed.");
+      const rawPayload = await response.text();
+      let payload: AssessmentResult | { error?: string } | null = null;
+      try {
+        payload = rawPayload ? JSON.parse(rawPayload) as AssessmentResult | { error?: string } : null;
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const apiMessage = payload && typeof payload === "object" && "error" in payload
+          ? payload.error
+          : undefined;
+        const statusMessage = response.status === 413
+          ? "The selected documents are too large for this deployment. Keep each document at 2 MB or less."
+          : response.status === 504
+            ? "Document analysis timed out. Please retry with shorter documents or use Demo Mode."
+            : `Analysis failed with status ${response.status}. Please retry.`;
+        throw new Error(apiMessage || statusMessage);
+      }
+      if (!payload || !("questions" in payload)) {
+        throw new Error("The analysis service returned an invalid response. Please retry.");
       }
       setAssessment(payload);
       setView("review");
