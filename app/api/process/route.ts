@@ -87,11 +87,12 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "The assessment could not be processed.";
-    const message = /rate|quota|429/i.test(rawMessage)
-      ? "The AI service is busy or its free-tier limit was reached. Try again shortly or explore Demo Mode."
+    const providerUnavailable = /rate|quota|429|high demand|overloaded|temporar(?:ily|y)|unavailable|503/i.test(rawMessage);
+    const message = providerUnavailable
+      ? "The AI service is temporarily busy after trying the available models. Try again shortly or explore Demo Mode."
       : /timeout|aborted/i.test(rawMessage)
         ? "Document analysis took too long. Try a smaller file or retry in a moment."
         : rawMessage;
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: providerUnavailable ? 503 : 500 });
   }
 }

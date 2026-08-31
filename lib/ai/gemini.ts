@@ -24,13 +24,22 @@ type UploadFileResponse = {
   };
 };
 
+const STABLE_FALLBACK_MODELS = [
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+] as const;
+
+const RETRYABLE_PROVIDER_STATUSES = new Set([429, 500, 502, 503, 504]);
+const RETRYABLE_PROVIDER_MESSAGE = /high demand|overloaded|temporar(?:ily|y)|rate limit|quota|unavailable|try again/i;
+
 export class GeminiProvider implements AssessmentAIProvider {
   readonly model: string;
   private readonly fileUriCache = new Map<string, string>();
 
   constructor(
     private readonly apiKey: string,
-    model = process.env.AI_MODEL || "gemini-2.5-flash",
+    model = process.env.AI_MODEL || "gemini-3.6-flash",
   ) {
     this.model = model;
   }
@@ -140,47 +149,78 @@ export class GeminiProvider implements AssessmentAIProvider {
   ): Promise<T> {
     const documentParts = await this.prepareContentParts(document);
     const parts: Array<Record<string, unknown>> = [{ text: prompt }, ...documentParts];
+    const models = Array.from(new Set([this.model, ...STABLE_FALLBACK_MODELS]));
+    let lastError = new Error("The AI provider could not process the document.");
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": this.apiKey,
-        },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts }],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: "application/json",
+    for (let modelIndex = 0; modelIndex < models.length; modelIndex += 1) {
+      const model = models[modelIndex];
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": this.apiKey,
+            },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts }],
+              generationConfig: {
+                responseMimeType: "application/json",
+              },
+            }),
+            signal: AbortSignal.timeout(180_000),
           },
-        }),
-        signal: AbortSignal.timeout(180_000),
-      },
-    );
+        );
 
-    const payload = (await response.json()) as GeminiResponse;
-    if (!response.ok) {
-      const message = payload.error?.message || "The AI provider could not process the document.";
-      throw new Error(message);
+        const rawPayload = await response.text();
+        let payload: GeminiResponse = {};
+        try {
+          payload = rawPayload ? JSON.parse(rawPayload) as GeminiResponse : {};
+        } catch {
+          throw new Error("The AI provider returned an invalid response. Please retry.");
+        }
+
+        if (!response.ok) {
+          const message = payload.error?.message || "The AI provider could not process the document.";
+          lastError = new Error(message);
+          const retryable = RETRYABLE_PROVIDER_STATUSES.has(response.status)
+            || RETRYABLE_PROVIDER_MESSAGE.test(message);
+          if (retryable && modelIndex < models.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 700 * (modelIndex + 1)));
+            continue;
+          }
+          throw lastError;
+        }
+
+        const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("");
+        if (!text) throw new Error("The AI provider returned an empty response.");
+
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text.replace(/^```json\s*|\s*```$/g, ""));
+        } catch {
+          throw new Error("The AI response was not valid structured JSON. Please retry.");
+        }
+
+        const validated = schema.safeParse(parsed);
+        if (!validated.success) {
+          throw new Error("The AI response was incomplete or malformed. Please retry.");
+        }
+        return validated.data;
+      } catch (error) {
+        lastError = error instanceof Error ? error : lastError;
+        const retryable = RETRYABLE_PROVIDER_MESSAGE.test(lastError.message)
+          || lastError.name === "TimeoutError";
+        if (retryable && modelIndex < models.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 700 * (modelIndex + 1)));
+          continue;
+        }
+        throw lastError;
+      }
     }
 
-    const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("");
-    if (!text) throw new Error("The AI provider returned an empty response.");
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text.replace(/^```json\s*|\s*```$/g, ""));
-    } catch {
-      throw new Error("The AI response was not valid structured JSON. Please retry.");
-    }
-
-    const validated = schema.safeParse(parsed);
-    if (!validated.success) {
-      throw new Error("The AI response was incomplete or malformed. Please retry.");
-    }
-    return validated.data;
+    throw lastError;
   }
 
   async extractQuestions(input: DocumentInput): Promise<ExtractedQuestionDraft[]> {
