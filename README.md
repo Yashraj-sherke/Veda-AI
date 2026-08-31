@@ -26,15 +26,15 @@ Open `http://localhost:3000`. Use **Explore Demo** for the complete flow without
 
 ## Environment
 
-Copy `.env.example` to `.env.local`. xAI is the default live provider:
+Copy `.env.example` to `.env.local`. Gemini is the default live provider:
 
 ```env
-AI_PROVIDER=xai
-XAI_MODEL=grok-4.6
-XAI_API_KEY=your_server_side_key
+AI_PROVIDER=gemini
+GEMINI_MODEL=gemini-3.6-flash
+GEMINI_API_KEY=your_server_side_key
 ```
 
-To use Gemini instead, set `AI_PROVIDER=gemini`, `GEMINI_MODEL=gemini-3.6-flash`, and `GEMINI_API_KEY`. Provider keys are read only inside the server route and are never included in browser code. If the selected provider key is absent, live uploads return a clear configuration error; **Explore Demo** remains fully available without a key.
+To use xAI instead, set `AI_PROVIDER=xai`, `XAI_MODEL=grok-4.6`, and `XAI_API_KEY`. Provider keys are read only inside the server route and are never included in browser code. If the selected provider key is absent, live uploads return a clear configuration error; **Explore Demo** remains fully available without a key.
 
 ## AI architecture
 
@@ -81,7 +81,7 @@ Core tests cover question-label variants, sub-parts, out-of-order mapping, missi
 
 ## Deployment
 
-The application is ready for Vercel or another Next.js host. Add `AI_PROVIDER=xai`, `XAI_API_KEY`, and optionally `XAI_MODEL` as server-side environment variables. The API route allows up to 120 seconds for document analysis; hosting platforms may impose lower request-body or execution limits, so large production workloads should use direct object-storage uploads and a background job queue.
+The application is ready for Vercel or another Next.js host. Add `AI_PROVIDER=gemini`, `GEMINI_API_KEY`, and optionally `GEMINI_MODEL` as server-side environment variables. The API route allows up to 120 seconds for document analysis; hosting platforms may impose lower request-body or execution limits, so large production workloads should use direct object-storage uploads and a background job queue.
 
 ## Assumptions
 

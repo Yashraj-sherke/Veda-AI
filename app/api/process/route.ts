@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: questionError || answerError }, { status: 400 });
     }
 
-    const providerName = (process.env.AI_PROVIDER || (process.env.XAI_API_KEY ? "xai" : "gemini")).toLowerCase();
+    const providerName = (process.env.AI_PROVIDER || "gemini").toLowerCase();
     let provider: AssessmentAIProvider;
     if (providerName === "xai") {
       const apiKey = process.env.XAI_API_KEY;

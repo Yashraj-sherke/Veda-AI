@@ -8,7 +8,7 @@ import type {
 } from "./provider";
 import { ANSWER_EXTRACTION_PROMPT, mappingPrompt, QUESTION_EXTRACTION_PROMPT } from "./prompts";
 import { answerExtractionSchema, mappingGradeSchema, questionExtractionSchema } from "./schemas";
-import type { z } from "zod";
+import { z } from "zod";
 
 type GeminiResponse = {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -147,6 +147,7 @@ export class GeminiProvider implements AssessmentAIProvider {
   ): Promise<T> {
     const documentParts = await this.prepareContentParts(document);
     const parts: Array<Record<string, unknown>> = [{ text: prompt }, ...documentParts];
+    const responseSchema = z.toJSONSchema(schema);
     const models = Array.from(new Set([this.model, ...STABLE_FALLBACK_MODELS]));
     let lastError = new Error("The AI provider could not process the document.");
 
@@ -164,7 +165,12 @@ export class GeminiProvider implements AssessmentAIProvider {
             body: JSON.stringify({
               contents: [{ role: "user", parts }],
               generationConfig: {
-                responseMimeType: "application/json",
+                responseFormat: {
+                  text: {
+                    mimeType: "application/json",
+                    schema: responseSchema,
+                  },
+                },
               },
             }),
             signal: AbortSignal.timeout(25_000),

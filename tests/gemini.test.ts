@@ -40,5 +40,17 @@ describe("GeminiProvider fallbacks", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toContain("gemini-3.6-flash");
     expect(fetchMock.mock.calls[1][0]).toContain("gemini-3.1-flash-lite");
+
+    const firstRequest = fetchMock.mock.calls[0][1] as RequestInit;
+    const requestBody = JSON.parse(firstRequest.body as string);
+    expect(requestBody.generationConfig.responseFormat).toMatchObject({
+      text: {
+        mimeType: "application/json",
+        schema: {
+          type: "object",
+          required: ["questions"],
+        },
+      },
+    });
   });
 });
