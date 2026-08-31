@@ -3,7 +3,7 @@ import { analyzeAssessment } from "@/lib/ai/analyze";
 import { GeminiProvider } from "@/lib/ai/gemini";
 import type { DocumentInput } from "@/lib/ai/provider";
 import { createDemoAssessment } from "@/data/demo-assessment";
-import { ACCEPTED_TYPES, MAX_FILE_BYTES } from "@/lib/document/files";
+import { ACCEPTED_TYPES, MAX_DOCUMENT_BYTES, MAX_FILE_BYTES } from "@/lib/document/files";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -39,8 +39,8 @@ function validateDocument(files: File[], label: string) {
   if (files.some((file) => !ACCEPTED_TYPES.includes(file.type as (typeof ACCEPTED_TYPES)[number]))) {
     return `${label} must be a PDF, PNG, JPG, or JPEG.`;
   }
-  if (files.some((file) => file.size > MAX_FILE_BYTES)) return `Each ${label.toLowerCase()} file must be 50 MB or smaller.`;
-  if (files.reduce((sum, file) => sum + file.size, 0) > 100 * 1024 * 1024) return `${label} exceeds the 100 MB total size limit.`;
+  if (files.some((file) => file.size > MAX_FILE_BYTES)) return `Each ${label.toLowerCase()} file must be 2 MB or smaller.`;
+  if (files.reduce((sum, file) => sum + file.size, 0) > MAX_DOCUMENT_BYTES) return `${label} must be 2 MB or smaller in total.`;
   return null;
 }
 

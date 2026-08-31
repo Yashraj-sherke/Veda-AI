@@ -94,6 +94,7 @@ The application is ready for Vercel or another Next.js host. Add `GEMINI_API_KEY
 ## Limitations
 
 - Very illegible handwriting, overlapping answers, unusual page rotation, or heavily skewed scans can reduce OCR and region accuracy.
+- Each uploaded document is limited to 2 MB so both documents fit within Vercel's request-size limit.
 - Gemini document requests and file sizes are subject to provider and hosting limits.
 - Live document analysis requires `GEMINI_API_KEY`; deterministic Demo Mode remains available without one.
 - A production deployment should add durable object storage, a job queue, retries with backoff, and teacher-confirmed mapping edits.

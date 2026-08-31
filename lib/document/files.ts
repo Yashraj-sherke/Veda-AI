@@ -6,7 +6,8 @@ export const ACCEPTED_TYPES = [
   "image/jpeg",
 ] as const;
 
-export const MAX_FILE_BYTES = 50 * 1024 * 1024;
+export const MAX_FILE_BYTES = 2 * 1024 * 1024;
+export const MAX_DOCUMENT_BYTES = 2 * 1024 * 1024;
 export const MAX_IMAGE_PAGES = 30;
 
 export function validateFiles(files: File[]): string | null {
@@ -16,7 +17,10 @@ export function validateFiles(files: File[]): string | null {
     return "That file type is not supported. Use PDF, PNG, JPG, or JPEG.";
   }
   if (files.some((file) => file.size > MAX_FILE_BYTES)) {
-    return "Each file must be 50 MB or smaller.";
+    return "Each file must be 2 MB or smaller.";
+  }
+  if (files.reduce((sum, file) => sum + file.size, 0) > MAX_DOCUMENT_BYTES) {
+    return "Each document must be 2 MB or smaller in total.";
   }
   if (files.some((file) => file.type === "application/pdf") && files.length > 1) {
     return "Upload one PDF, or select multiple image pages—not both.";

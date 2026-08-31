@@ -80,7 +80,7 @@ export function UploadZone({
       <button type="button" className="upload-zone-button" onClick={() => inputRef.current?.click()}>
         <span className="upload-icon-box"><Upload size={20} /></span>
         <span className="upload-zone-title">Upload <strong className="upload-zone-title-highlight">{title}</strong></span>
-        <small className="upload-zone-sub">Max 50MB • PDF, PNG, JPG</small>
+        <small className="upload-zone-sub">Max 2MB • PDF, PNG, JPG</small>
       </button>
     </div>
   );
