@@ -25,7 +25,7 @@ type UploadFileResponse = {
 };
 
 const STABLE_FALLBACK_MODELS = [
-  "gemini-2.5-flash",
+  "gemini-3.1-flash-lite",
 ] as const;
 
 const RETRYABLE_PROVIDER_STATUSES = new Set([429, 500, 502, 503, 504]);
