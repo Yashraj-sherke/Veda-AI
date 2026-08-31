@@ -28,6 +28,7 @@ const STABLE_FALLBACK_MODELS = [
   "gemini-3.7-flash",
   "gemini-3.6-flash",
   "gemini-3.5-flash",
+  "gemini-2.5-flash",
 ] as const;
 
 const RETRYABLE_PROVIDER_STATUSES = new Set([429, 500, 502, 503, 504]);

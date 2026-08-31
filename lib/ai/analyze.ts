@@ -14,10 +14,10 @@ export async function analyzeAssessment(params: {
   answerSheetPageCount: number;
 }) {
   const { provider } = params;
-  const [questionDrafts, answers] = await Promise.all([
-    provider.extractQuestions(params.questionPaper),
-    provider.extractAnswers(params.answerSheet),
-  ]);
+  // Keep multimodal calls sequential. Free and shared Gemini capacity can reject
+  // simultaneous document requests even when the project is within its quota.
+  const questionDrafts = await provider.extractQuestions(params.questionPaper);
+  const answers = await provider.extractAnswers(params.answerSheet);
 
   if (!questionDrafts.length) throw new Error("No printed questions could be identified in the question paper.");
 
