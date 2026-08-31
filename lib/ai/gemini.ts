@@ -37,7 +37,7 @@ export class GeminiProvider implements AssessmentAIProvider {
 
   constructor(
     private readonly apiKey: string,
-    model = process.env.AI_MODEL || "gemini-3.6-flash",
+    model = process.env.GEMINI_MODEL || process.env.AI_MODEL || "gemini-3.6-flash",
   ) {
     this.model = model;
   }

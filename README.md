@@ -26,15 +26,15 @@ Open `http://localhost:3000`. Use **Explore Demo** for the complete flow without
 
 ## Environment
 
-Copy `.env.example` to `.env.local`:
+Copy `.env.example` to `.env.local`. xAI is the default live provider:
 
 ```env
-AI_PROVIDER=gemini
-AI_MODEL=gemini-3.6-flash
-GEMINI_API_KEY=your_server_side_key
+AI_PROVIDER=xai
+XAI_MODEL=grok-4.6
+XAI_API_KEY=your_server_side_key
 ```
 
-The key is read only inside the server route and is never included in browser code. If `GEMINI_API_KEY` is absent, live uploads return a clear configuration error; **Explore Demo** remains fully available without a key.
+To use Gemini instead, set `AI_PROVIDER=gemini`, `GEMINI_MODEL=gemini-3.6-flash`, and `GEMINI_API_KEY`. Provider keys are read only inside the server route and are never included in browser code. If the selected provider key is absent, live uploads return a clear configuration error; **Explore Demo** remains fully available without a key.
 
 ## AI architecture
 
@@ -51,7 +51,7 @@ Handwritten answer extraction┘               ↓
                                     heuristic grading + review UI
 ```
 
-The `AssessmentAIProvider` interface keeps model-specific code out of UI and mapping logic. Gemini uses vision input and JSON-only prompts; every response is validated with Zod before it reaches application state. Explicit high-confidence label matches are locked before AI fallback so semantic reasoning cannot casually override deterministic evidence.
+The `AssessmentAIProvider` interface keeps model-specific code out of UI and mapping logic. xAI uses Grok's Responses and Files APIs, while Gemini uses multimodal generation; every response is validated with Zod before it reaches application state. Explicit high-confidence label matches are locked before AI fallback so semantic reasoning cannot casually override deterministic evidence.
 
 ## Exact-region strategy
 
@@ -81,7 +81,7 @@ Core tests cover question-label variants, sub-parts, out-of-order mapping, missi
 
 ## Deployment
 
-The application is ready for Vercel or another Next.js host. Add `GEMINI_API_KEY` and optionally `AI_MODEL` as server-side environment variables. The API route allows up to 120 seconds for document analysis; hosting platforms may impose lower request-body or execution limits, so large production workloads should use direct object-storage uploads and a background job queue.
+The application is ready for Vercel or another Next.js host. Add `AI_PROVIDER=xai`, `XAI_API_KEY`, and optionally `XAI_MODEL` as server-side environment variables. The API route allows up to 120 seconds for document analysis; hosting platforms may impose lower request-body or execution limits, so large production workloads should use direct object-storage uploads and a background job queue.
 
 ## Assumptions
 
@@ -95,6 +95,6 @@ The application is ready for Vercel or another Next.js host. Add `GEMINI_API_KEY
 
 - Very illegible handwriting, overlapping answers, unusual page rotation, or heavily skewed scans can reduce OCR and region accuracy.
 - Each uploaded document is limited to 2 MB so both documents fit within Vercel's request-size limit.
-- Gemini document requests and file sizes are subject to provider and hosting limits.
-- Live document analysis requires `GEMINI_API_KEY`; deterministic Demo Mode remains available without one.
+- xAI or Gemini document requests and file sizes are subject to provider and hosting limits.
+- Live document analysis requires the selected provider's API key; deterministic Demo Mode remains available without one.
 - A production deployment should add durable object storage, a job queue, retries with backoff, and teacher-confirmed mapping edits.

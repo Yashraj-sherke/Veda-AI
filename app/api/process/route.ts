@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { analyzeAssessment } from "@/lib/ai/analyze";
 import { GeminiProvider } from "@/lib/ai/gemini";
-import type { DocumentInput } from "@/lib/ai/provider";
+import type { AssessmentAIProvider, DocumentInput } from "@/lib/ai/provider";
+import { XaiProvider } from "@/lib/ai/xai";
 import { createDemoAssessment } from "@/data/demo-assessment";
 import { ACCEPTED_TYPES, MAX_DOCUMENT_BYTES, MAX_FILE_BYTES } from "@/lib/document/files";
 
@@ -59,18 +60,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: questionError || answerError }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          error:
-            "Live document analysis is not configured. Add GEMINI_API_KEY to .env.local, restart the server, or use Explore Demo.",
-        },
-        { status: 503 },
-      );
+    const providerName = (process.env.AI_PROVIDER || (process.env.XAI_API_KEY ? "xai" : "gemini")).toLowerCase();
+    let provider: AssessmentAIProvider;
+    if (providerName === "xai") {
+      const apiKey = process.env.XAI_API_KEY;
+      if (!apiKey) {
+        return NextResponse.json(
+          { error: "Live analysis is configured for xAI, but XAI_API_KEY is missing." },
+          { status: 503 },
+        );
+      }
+      provider = new XaiProvider(apiKey);
+    } else {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return NextResponse.json(
+          { error: "Live analysis is configured for Gemini, but GEMINI_API_KEY is missing." },
+          { status: 503 },
+        );
+      }
+      provider = new GeminiProvider(apiKey);
     }
-
-    const provider = new GeminiProvider(apiKey);
     const [questionPaper, answerSheet] = await Promise.all([
       prepareDocument(questionFiles),
       prepareDocument(answerFiles),
