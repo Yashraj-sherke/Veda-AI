@@ -21,10 +21,7 @@ export const answerExtractionSchema = z.object({
       regions: z.array(
         z.object({
           pageNumber: z.number().int().positive(),
-          x: z.number(),
-          y: z.number(),
-          width: z.number(),
-          height: z.number(),
+          box_2d: z.array(z.number().int().min(0).max(1000)).length(4),
           confidence: z.number().min(0).max(1),
         }),
       ).min(1),

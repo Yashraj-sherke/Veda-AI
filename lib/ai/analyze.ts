@@ -1,7 +1,7 @@
 import { calculateSummary } from "@/lib/assessment";
 import { createDeterministicMappings } from "@/lib/mapping/map";
 import { normalizeQuestionLabel } from "@/lib/mapping/normalize";
-import type { AnswerMapping, AssessmentQuestion, AssessmentResult } from "@/types/assessment";
+import type { AnalysisProgress, AnswerMapping, AssessmentQuestion, AssessmentResult } from "@/types/assessment";
 import type { AssessmentAIProvider, DocumentInput } from "./provider";
 
 export async function analyzeAssessment(params: {
@@ -12,8 +12,15 @@ export async function analyzeAssessment(params: {
   answerSheetName: string;
   questionPaperPageCount: number;
   answerSheetPageCount: number;
+  onProgress?: (progress: AnalysisProgress) => void;
 }) {
   const { provider } = params;
+  params.onProgress?.({
+    stage: "extracting",
+    value: 24,
+    label: "Extracting questions and answers",
+    detail: "Reading printed questions, handwriting, labels, and page regions.",
+  });
   // Run the independent extraction calls together so the complete request stays
   // within hosting proxy timeouts. Provider calls have their own bounded timeout.
   const [questionDrafts, answers] = await Promise.all([
@@ -22,6 +29,13 @@ export async function analyzeAssessment(params: {
   ]);
 
   if (!questionDrafts.length) throw new Error("No printed questions could be identified in the question paper.");
+
+  params.onProgress?.({
+    stage: "mapping",
+    value: 66,
+    label: "Matching answers to questions",
+    detail: `Found ${questionDrafts.length} questions and ${answers.length} answer blocks. Checking labels and sub-parts.`,
+  });
 
   const baseQuestions: AssessmentQuestion[] = questionDrafts.map((question, index) => ({
     id: `question-${index + 1}`,
@@ -40,6 +54,13 @@ export async function analyzeAssessment(params: {
   const decisions = answers.length > 0
     ? await provider.mapAndGradeAnswers(questionDrafts, answers, deterministic)
     : [];
+
+  params.onProgress?.({
+    stage: "finalizing",
+    value: 90,
+    label: "Preparing the review workspace",
+    detail: "Finalizing unanswered items, unmatched responses, scores, and highlights.",
+  });
   const questionByNumber = new Map(baseQuestions.map((question) => [question.normalizedNumber, question]));
   const locked = new Map(
     deterministic

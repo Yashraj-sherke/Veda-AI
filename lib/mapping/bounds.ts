@@ -1,5 +1,21 @@
 import type { BoundingBox } from "@/types/assessment";
 
+/** Converts Gemini's native [ymin, xmin, ymax, xmax] 0-1000 box format. */
+export function box2dToBoundingBox(box2d: readonly number[]): BoundingBox {
+  const [firstY = 0, firstX = 0, secondY = 0, secondX = 0] = box2d;
+  const yMin = Math.min(firstY, secondY) / 1000;
+  const xMin = Math.min(firstX, secondX) / 1000;
+  const yMax = Math.max(firstY, secondY) / 1000;
+  const xMax = Math.max(firstX, secondX) / 1000;
+
+  return clampBoundingBox({
+    x: xMin,
+    y: yMin,
+    width: xMax - xMin,
+    height: yMax - yMin,
+  });
+}
+
 export function clampBoundingBox(box: BoundingBox): BoundingBox {
   const largestCoordinate = Math.max(
     Math.abs(box.x),

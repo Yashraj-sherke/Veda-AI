@@ -1,4 +1,4 @@
-import { clampBoundingBox } from "@/lib/mapping/bounds";
+import { box2dToBoundingBox } from "@/lib/mapping/bounds";
 import type { AnswerMapping, ExtractedAnswer } from "@/types/assessment";
 import type {
   AssessmentAIProvider,
@@ -144,6 +144,7 @@ export class GeminiProvider implements AssessmentAIProvider {
     prompt: string,
     schema: z.ZodType<T>,
     document?: DocumentInput,
+    spatialExtraction = false,
   ): Promise<T> {
     const documentParts = await this.prepareContentParts(document);
     const parts: Array<Record<string, unknown>> = [{ text: prompt }, ...documentParts];
@@ -165,6 +166,10 @@ export class GeminiProvider implements AssessmentAIProvider {
             body: JSON.stringify({
               contents: [{ role: "user", parts }],
               generationConfig: {
+                ...(spatialExtraction ? {
+                  mediaResolution: "MEDIA_RESOLUTION_HIGH",
+                  thinkingConfig: { thinkingLevel: "MINIMAL" },
+                } : {}),
                 responseFormat: {
                   text: {
                     // responseFormat.text.mimeType is a Gemini enum, not an
@@ -175,7 +180,7 @@ export class GeminiProvider implements AssessmentAIProvider {
                 },
               },
             }),
-            signal: AbortSignal.timeout(25_000),
+            signal: AbortSignal.timeout(spatialExtraction ? 45_000 : 25_000),
           },
         );
 
@@ -238,12 +243,12 @@ export class GeminiProvider implements AssessmentAIProvider {
   }
 
   async extractAnswers(input: DocumentInput): Promise<ExtractedAnswer[]> {
-    const result = await this.callStructured(ANSWER_EXTRACTION_PROMPT, answerExtractionSchema, input);
+    const result = await this.callStructured(ANSWER_EXTRACTION_PROMPT, answerExtractionSchema, input, true);
     return result.answers.map((answer, answerIndex) => {
       const regions = answer.regions.map((rawRegion, regionIndex) => ({
         id: `answer-${answerIndex + 1}-region-${regionIndex + 1}`,
         pageNumber: rawRegion.pageNumber,
-        boundingBox: clampBoundingBox(rawRegion),
+        boundingBox: box2dToBoundingBox(rawRegion.box_2d),
         confidence: rawRegion.confidence,
       }));
       const pages = regions.map((region) => region.pageNumber);

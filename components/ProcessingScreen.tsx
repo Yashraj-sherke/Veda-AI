@@ -1,17 +1,28 @@
 "use client";
 
-import { RotateCcw, X, XCircle } from "lucide-react";
+import { Check, FileSearch, LocateFixed, RotateCcw, Sparkles, UploadCloud, X, XCircle } from "lucide-react";
+import type { AnalysisProgress } from "@/types/assessment";
+
+const stages = [
+  { key: "uploading", label: "Upload both files", icon: UploadCloud },
+  { key: "extracting", label: "Extract questions and answers", icon: FileSearch },
+  { key: "mapping", label: "Map labels and sub-parts", icon: LocateFixed },
+  { key: "finalizing", label: "Prepare highlights", icon: Sparkles },
+] as const;
 
 export function ProcessingScreen({
+  progress,
   error,
   onRetry,
   onCancel,
 }: {
-  activeIndex?: number;
+  progress: AnalysisProgress;
   error?: string | null;
   onRetry: () => void;
   onCancel: () => void;
 }) {
+  const activeIndex = Math.max(0, stages.findIndex((stage) => stage.key === progress.stage));
+
   return (
     <main className="processing-screen" aria-live="polite">
       <div className="processing-viewport-card">
@@ -107,8 +118,41 @@ export function ProcessingScreen({
               </svg>
             </div>
 
-            <h1 className="extracting-title">Extracting...</h1>
-            <p className="extracting-subtitle">This may take a while</p>
+            <h1 className="extracting-title">{progress.label}</h1>
+            <p className="extracting-subtitle">{progress.detail}</p>
+
+            <div className="processing-progress" aria-label="Assessment analysis progress">
+              <div className="processing-progress-meta">
+                <span>Step {activeIndex + 1} of {stages.length}</span>
+                <strong>{progress.value}%</strong>
+              </div>
+              <div
+                className="processing-progress-track"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progress.value}
+                aria-valuetext={progress.label}
+              >
+                <span style={{ width: `${progress.value}%` }} />
+              </div>
+              <ol className="processing-stage-list">
+                {stages.map((stage, index) => {
+                  const Icon = stage.icon;
+                  const complete = index < activeIndex;
+                  const active = index === activeIndex;
+                  return (
+                    <li
+                      className={`${complete ? "processing-stage--complete" : ""} ${active ? "processing-stage--active" : ""}`}
+                      key={stage.key}
+                    >
+                      <span>{complete ? <Check size={14} /> : <Icon size={14} />}</span>
+                      {stage.label}
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
           </div>
         )}
       </div>

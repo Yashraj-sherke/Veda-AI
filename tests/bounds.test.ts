@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boundingBoxToPixels, clampBoundingBox } from "@/lib/mapping/bounds";
+import { boundingBoxToPixels, box2dToBoundingBox, clampBoundingBox } from "@/lib/mapping/bounds";
 
 describe("normalized answer bounds", () => {
   it("scales the same region to different viewer sizes", () => {
@@ -33,6 +33,24 @@ describe("normalized answer bounds", () => {
       y: 0.25,
       width: 0.75,
       height: 0.2,
+    });
+  });
+
+  it("converts Gemini box_2d coordinates without swapping the axes", () => {
+    expect(box2dToBoundingBox([420, 120, 610, 880])).toEqual({
+      x: 0.12,
+      y: 0.42,
+      width: 0.76,
+      height: 0.19,
+    });
+  });
+
+  it("repairs reversed box_2d corners", () => {
+    expect(box2dToBoundingBox([610, 880, 420, 120])).toEqual({
+      x: 0.12,
+      y: 0.42,
+      width: 0.76,
+      height: 0.19,
     });
   });
 });

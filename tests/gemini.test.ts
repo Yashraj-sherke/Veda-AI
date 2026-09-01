@@ -53,4 +53,66 @@ describe("GeminiProvider fallbacks", () => {
       },
     });
   });
+
+  it("requests native vision boxes and converts them to viewer coordinates", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                answers: [{
+                  detectedLabel: "17(c)",
+                  text: "Base stacking adds stability.",
+                  confidence: 0.94,
+                  regions: [{
+                    pageNumber: 4,
+                    box_2d: [520, 110, 640, 900],
+                    confidence: 0.96,
+                  }],
+                }],
+              }),
+            }],
+          },
+        }],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new GeminiProvider("test-key", "gemini-3.6-flash");
+    const answers = await provider.extractAnswers({ parts: [] });
+
+    expect(answers[0].regions[0]).toMatchObject({
+      pageNumber: 4,
+      boundingBox: { x: 0.11, y: 0.52, width: 0.79, height: 0.12 },
+    });
+
+    const request = fetchMock.mock.calls[0][1] as RequestInit;
+    const requestBody = JSON.parse(request.body as string);
+    expect(requestBody.generationConfig).toMatchObject({
+      mediaResolution: "MEDIA_RESOLUTION_HIGH",
+      thinkingConfig: { thinkingLevel: "MINIMAL" },
+      responseFormat: {
+        text: {
+          mimeType: "APPLICATION_JSON",
+          schema: {
+            properties: {
+              answers: {
+                items: {
+                  properties: {
+                    regions: {
+                      items: {
+                        properties: { box_2d: { minItems: 4, maxItems: 4 } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
 });

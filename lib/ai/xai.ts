@@ -1,4 +1,4 @@
-import { clampBoundingBox } from "@/lib/mapping/bounds";
+import { box2dToBoundingBox } from "@/lib/mapping/bounds";
 import type { AnswerMapping, ExtractedAnswer } from "@/types/assessment";
 import { z } from "zod";
 import type {
@@ -176,7 +176,7 @@ export class XaiProvider implements AssessmentAIProvider {
       const regions = answer.regions.map((rawRegion, regionIndex) => ({
         id: `answer-${answerIndex + 1}-region-${regionIndex + 1}`,
         pageNumber: rawRegion.pageNumber,
-        boundingBox: clampBoundingBox(rawRegion),
+        boundingBox: box2dToBoundingBox(rawRegion.box_2d),
         confidence: rawRegion.confidence,
       }));
       const pages = regions.map((region) => region.pageNumber);

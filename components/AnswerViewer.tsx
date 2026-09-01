@@ -76,14 +76,6 @@ export function AnswerViewer({
   const isDemo = assessment.mode === "demo";
   const pageCount = assessment.answerSheet.pageCount;
 
-  // Auto-switch to answer's page whenever selected question/answer changes
-  useEffect(() => {
-    if (answer?.regions?.[0]?.pageNumber) {
-      setCurrentPage(answer.regions[0].pageNumber);
-      setActiveRegionIndex(0);
-    }
-  }, [answer?.id]);
-
   const imageUrls = useMemo(
     () => (files ?? []).filter((file) => file.type.startsWith("image/")).map((file) => URL.createObjectURL(file)),
     [files],
