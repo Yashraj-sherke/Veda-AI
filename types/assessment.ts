@@ -92,13 +92,6 @@ export type AssessmentResult = {
   warnings: string[];
 };
 
-export type AnalysisProgress = {
-  stage: "uploading" | "extracting" | "mapping" | "finalizing";
-  value: number;
-  label: string;
-  detail: string;
-};
-
 export type UploadedDocument = {
   files: File[];
   displayName: string;

@@ -5,7 +5,6 @@ import type { AssessmentAIProvider, DocumentInput } from "@/lib/ai/provider";
 import { XaiProvider } from "@/lib/ai/xai";
 import { createDemoAssessment } from "@/data/demo-assessment";
 import { ACCEPTED_TYPES, MAX_DOCUMENT_BYTES, MAX_FILE_BYTES } from "@/lib/document/files";
-import type { AnalysisProgress, AssessmentResult } from "@/types/assessment";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -45,22 +44,6 @@ function validateDocument(files: File[], label: string) {
   if (files.reduce((sum, file) => sum + file.size, 0) > MAX_DOCUMENT_BYTES) return `${label} must be 2 MB or smaller in total.`;
   return null;
 }
-
-function normalizeProcessError(error: unknown) {
-  const rawMessage = error instanceof Error ? error.message : "The assessment could not be processed.";
-  const providerUnavailable = /rate|quota|429|high demand|overloaded|temporar(?:ily|y)|unavailable|503/i.test(rawMessage);
-  const message = providerUnavailable
-    ? "The AI service is temporarily busy after trying the available models. Try again shortly or explore Demo Mode."
-    : /timeout|aborted/i.test(rawMessage)
-      ? "Document analysis took too long. Try a smaller file or retry in a moment."
-      : rawMessage;
-  return { message, status: providerUnavailable ? 503 : 500 };
-}
-
-type ProcessStreamEvent =
-  | { type: "progress"; progress: AnalysisProgress }
-  | { type: "result"; result: AssessmentResult }
-  | { type: "error"; error: string };
 
 export async function POST(request: Request) {
   try {
@@ -102,47 +85,24 @@ export async function POST(request: Request) {
       prepareDocument(questionFiles),
       prepareDocument(answerFiles),
     ]);
-    const encoder = new TextEncoder();
-    let cancelled = false;
-    const stream = new ReadableStream<Uint8Array>({
-      cancel() {
-        cancelled = true;
-      },
-      start(controller) {
-        const send = (event: ProcessStreamEvent) => {
-          if (!cancelled) controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
-        };
-
-        void (async () => {
-          try {
-            const result = await analyzeAssessment({
-              provider,
-              questionPaper: questionPaper.input,
-              answerSheet: answerSheet.input,
-              questionPaperName: questionFiles.length === 1 ? questionFiles[0].name : `${questionFiles.length} question-paper images`,
-              answerSheetName: answerFiles.length === 1 ? answerFiles[0].name : `${answerFiles.length} answer-sheet images`,
-              questionPaperPageCount: questionPaper.pageCount,
-              answerSheetPageCount: answerSheet.pageCount,
-              onProgress: (progress) => send({ type: "progress", progress }),
-            });
-            send({ type: "result", result });
-          } catch (error) {
-            send({ type: "error", error: normalizeProcessError(error).message });
-          } finally {
-            if (!cancelled) controller.close();
-          }
-        })();
-      },
+    const result = await analyzeAssessment({
+      provider,
+      questionPaper: questionPaper.input,
+      answerSheet: answerSheet.input,
+      questionPaperName: questionFiles.length === 1 ? questionFiles[0].name : `${questionFiles.length} question-paper images`,
+      answerSheetName: answerFiles.length === 1 ? answerFiles[0].name : `${answerFiles.length} answer-sheet images`,
+      questionPaperPageCount: questionPaper.pageCount,
+      answerSheetPageCount: answerSheet.pageCount,
     });
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "application/x-ndjson; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
-      },
-    });
+    return NextResponse.json(result);
   } catch (error) {
-    const normalized = normalizeProcessError(error);
-    return NextResponse.json({ error: normalized.message }, { status: normalized.status });
+    const rawMessage = error instanceof Error ? error.message : "The assessment could not be processed.";
+    const providerUnavailable = /rate|quota|429|high demand|overloaded|temporar(?:ily|y)|unavailable|503/i.test(rawMessage);
+    const message = providerUnavailable
+      ? "The AI service is temporarily busy after trying the available models. Try again shortly or explore Demo Mode."
+      : /timeout|aborted/i.test(rawMessage)
+        ? "Document analysis took too long. Try a smaller file or retry in a moment."
+        : rawMessage;
+    return NextResponse.json({ error: message }, { status: providerUnavailable ? 503 : 500 });
   }
 }
