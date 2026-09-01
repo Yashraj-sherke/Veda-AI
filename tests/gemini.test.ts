@@ -45,7 +45,7 @@ describe("GeminiProvider fallbacks", () => {
     const requestBody = JSON.parse(firstRequest.body as string);
     expect(requestBody.generationConfig.responseFormat).toMatchObject({
       text: {
-        mimeType: "application/json",
+        mimeType: "APPLICATION_JSON",
         schema: {
           type: "object",
           required: ["questions"],

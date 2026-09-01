@@ -167,7 +167,9 @@ export class GeminiProvider implements AssessmentAIProvider {
               generationConfig: {
                 responseFormat: {
                   text: {
-                    mimeType: "application/json",
+                    // responseFormat.text.mimeType is a Gemini enum, not an
+                    // IANA MIME type string (unlike responseMimeType).
+                    mimeType: "APPLICATION_JSON",
                     schema: responseSchema,
                   },
                 },
